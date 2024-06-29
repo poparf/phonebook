@@ -1,6 +1,19 @@
 const express = require("express");
 const app = express();
+
 app.use(express.json());
+const morgan = require("morgan");
+app.use(morgan('tiny'))
+
+// var fs = require("fs");
+// var path = require("path");
+// var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
+//   flags: "a",
+// });
+
+// setup the logger
+app.use(morgan("combined", { stream: accessLogStream }));
+
 const PORT = 3001;
 
 entries = [
@@ -25,6 +38,15 @@ entries = [
     number: "39-23-6423122",
   },
 ];
+
+// const requestLogger = (request, response, next) => {
+//     console.log('Method:', request.method)
+//     console.log('Path:  ', request.path)
+//     console.log('Body:  ', request.body)
+//     console.log('---')
+//     next()
+//   }
+//   app.use(requestLogger)
 
 app.get("/api/persons", (req, res) => {
   res.json(entries);
@@ -81,6 +103,12 @@ app.get("/info", (req, res) => {
     `;
   res.send(htmlContent);
 });
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "unknown endpoint" });
+};
+
+app.use(unknownEndpoint);
 
 app.listen(PORT, () => {
   console.log(`Serverul ruleaza la http://localhost:${PORT}`);
