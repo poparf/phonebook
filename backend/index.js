@@ -3,16 +3,17 @@ const app = express();
 
 app.use(express.json());
 const morgan = require("morgan");
-app.use(morgan('tiny'))
+morgan.token("postBody", (req, res) => JSON.stringify(req.body));
+let tiny = ":method :url :status :res[content-length] - :response-time ms";
+app.use(morgan(`${tiny} :postBody`));
 
 // var fs = require("fs");
 // var path = require("path");
 // var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
 //   flags: "a",
 // });
-
 // setup the logger
-app.use(morgan("combined", { stream: accessLogStream }));
+//app.use(morgan("combined", { stream: accessLogStream }));
 
 const PORT = 3001;
 
