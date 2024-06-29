@@ -16,7 +16,7 @@ app.use(morgan(`${tiny} :postBody`));
 // setup the logger
 //app.use(morgan("combined", { stream: accessLogStream }));
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 entries = [
   {
