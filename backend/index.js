@@ -1,8 +1,9 @@
 const express = require("express");
 const app = express();
-const cors = require('cors')
-app.use(cors())
+const cors = require("cors");
+app.use(cors());
 app.use(express.json());
+app.use(express.static("dist"));
 const morgan = require("morgan");
 morgan.token("postBody", (req, res) => JSON.stringify(req.body));
 let tiny = ":method :url :status :res[content-length] - :response-time ms";
