@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -8,92 +9,84 @@ const morgan = require("morgan");
 morgan.token("postBody", (req, res) => JSON.stringify(req.body));
 let tiny = ":method :url :status :res[content-length] - :response-time ms";
 app.use(morgan(`${tiny} :postBody`));
-
-// var fs = require("fs");
-// var path = require("path");
-// var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
-//   flags: "a",
-// });
-// setup the logger
-//app.use(morgan("combined", { stream: accessLogStream }));
+const entryModel = require("./models/entry");
 
 const PORT = process.env.PORT || 3001;
 
-entries = [
-  {
-    id: "1",
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: "2",
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: "3",
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: "4",
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
-
-// const requestLogger = (request, response, next) => {
-//     console.log('Method:', request.method)
-//     console.log('Path:  ', request.path)
-//     console.log('Body:  ', request.body)
-//     console.log('---')
-//     next()
-//   }
-//   app.use(requestLogger)
-
 app.get("/api/persons", (req, res) => {
-  res.json(entries);
+  entryModel.find({}).then(data => {
+    res.json(data);
+  })
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  let searchedId = req.params.id;
-  let entry = entries.find((e) => e.id == searchedId);
-  if (entry) res.send(entry);
-  else res.status(400).end();
+  entryModel.findById(req.params.id).then(out => {
+    res.json(out);
+  }).catch(err => {
+    console.log(err);
+    res.send(400).end();
+  })
 });
 
 app.delete("/api/persons/:id", (req, res) => {
-  entries = entries.filter((e) => e.id != req.params.id);
-  res.status(200).end();
+  entryModel.deleteById(req.params.id).then(out => {
+    res.json(out);
+  }).catch(err => {
+    res.send(500).end();
+  })
 });
 
-app.post("/api/persons", (req, res) => {
+app.put("/api/persons/:id", async (req, res) => {
   let entry = req.body;
+  let doc = await entryModel.findById(req.params.id);
+
+  doc.name = req.body.name;
+  doc.number= req.body.number;
+
+  doc.save().then(out => {
+    res.status(200).send(out);
+  }).catch(er => {
+    res.status(500).send(er);
+  })
+})
+
+app.post("/api/persons", async (req, res) => {
+  let entry = req.body;
+
   if (!entry) {
-    res.status(400).json({
+    return res.status(400).json({
       error: "Content missing.",
     });
   }
 
   // Check if entry has name and number fields
-  if (!entry.hasOwnProperty("name") || !entry.hasOwnProperty("number"))
-    res.status(400).json({
+  if (!entry.hasOwnProperty("name") || !entry.hasOwnProperty("number")) {
+    return res.status(400).json({
       error: "Request body must include name and number.",
     });
-  // check if the name already exists in the phonebook
-  if (entries.find((e) => e.name === entry.name))
-    res.send(400).json({
+  }
+
+  // Check if the name already exists in the phonebook
+  const existingEntry = await entryModel.findOne({ name: entry.name });
+  if (existingEntry) {
+    return res.status(400).json({
       error: "Person with specified name is already in the phonebook.",
     });
+  }
 
-  let newPerson = {
-    id: String(Math.floor(Math.random() * 10000)),
-    name: entry.name,
-    number: entry.number,
-  };
-  entries = entries.concat(newPerson);
-  res.status(201).location(`/api/persons/${newPerson.id}`).send(newPerson);
+  try {
+    let newPhone = new entryModel({
+      name: req.body.name,
+      number: req.body.number
+    });
+
+    const out = await entryModel.create(newPhone);
+    return res.status(201).location(`/api/persons/${out.id}`).send(out);
+  } catch (error) {
+    return res.status(500).end();
+  }
 });
+
 
 app.get("/info", (req, res) => {
   let noPersons = entries.length;
