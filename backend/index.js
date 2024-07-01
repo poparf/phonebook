@@ -19,7 +19,7 @@ app.get("/api/persons", (req, res) => {
   });
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   entryModel
     .findById(req.params.id)
     .then((out) => {
@@ -30,7 +30,7 @@ app.get("/api/persons/:id", (req, res) => {
     });
 });
 
-app.delete("/api/persons/:id", (req, res) => {
+app.delete("/api/persons/:id", (req, res, next) => {
   entryModel
     .deleteOne({ _id: req.params.id })
     .then((out) => {
@@ -41,7 +41,7 @@ app.delete("/api/persons/:id", (req, res) => {
     });
 });
 
-app.put("/api/persons/:id", async (req, res) => {
+app.put("/api/persons/:id", async (req, res, next) => {
   let doc = await entryModel.findById(req.params.id);
 
   doc.name = req.body.name;
@@ -57,7 +57,7 @@ app.put("/api/persons/:id", async (req, res) => {
     });
 });
 
-app.post("/api/persons", async (req, res) => {
+app.post("/api/persons", async (req, res, next) => {
   let entry = req.body;
 
   if (!entry) {
@@ -81,20 +81,21 @@ app.post("/api/persons", async (req, res) => {
     });
   }
 
-  try {
     let newPhone = new entryModel({
       name: req.body.name,
       number: req.body.number,
     });
+    console.log(" i got here");
 
-    const out = await entryModel.create(newPhone);
-    return res.status(201).location(`/api/persons/${out.id}`).send(out);
-  } catch (error) {
-    next(error);
-  }
+    entryModel.create(newPhone)
+    .then(out => res.status(201).location(`/api/persons/${out.id}`).send(out))
+    .catch(error => {
+      next(error);
+    })
+
 });
 
-app.get("/info", (req, res) => {
+app.get("/info", (req, res, next) => {
   entryModel
     .countDocuments({})
     .then((count) => {
@@ -116,12 +117,18 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint);
 
-const errorHandler = (request, response, error) => {
-  console.error(error.message);
-  res.send(400).json({
-    error: error.message,
+const errorHandler = (error, request, response, next) => {
+  console.error("ERROR:",error.message); // Log the error message
+
+  if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message });
+  }
+
+  response.status(500).json({
+    error: 'Internal Server Error',
   });
 };
+
 
 app.use(errorHandler);
 

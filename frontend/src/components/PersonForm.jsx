@@ -1,6 +1,8 @@
 import { useState } from "react";
 import DbService from "../services/DbService";
 
+
+
 const PersonForm = ({ persons, setPersons, setPersonsToShow, setMessage }) => {
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
@@ -15,18 +17,22 @@ const PersonForm = ({ persons, setPersons, setPersonsToShow, setMessage }) => {
 
       if (response) {
         foundPerson.number = newNumber;
-        DbService.updatePersonFromDb(foundPerson);
+        DbService.updatePersonFromDb(foundPerson).then(res => {
+          setNewName("");
+          setNewNumber("");
+          setPersonsToShow([...persons]);
+    
+          setMessage(`Replaced phone number for ${newName}.`);
+          setTimeout(() => {
+            setMessage("");
+          }, 5000);
+        }).catch(error => {
+          setMessage(error.response.data.error);
+          setTimeout(() => {
+            setMessage("");
+          }, 5000);
+        });
       }
-
-      setNewName("");
-      setNewNumber("");
-      setPersonsToShow([...persons]);
-
-      setMessage(`Replaced phone number for ${newName}.`);
-      setTimeout(() => {
-        setMessage("");
-      }, 5000);
-
       return;
     }
 
@@ -36,15 +42,24 @@ const PersonForm = ({ persons, setPersons, setPersonsToShow, setMessage }) => {
       number: newNumber,
       id: `${persons.length + 1}`,
     };
-    DbService.addPersonToDb(newPerson);
-    setPersons([...persons, newPerson]);
-    setPersonsToShow([...persons, newPerson]);
-    setNewName("");
-    setNewNumber("");
-    setMessage(`Added new person: ${newName}.`);
-    setTimeout(() => {
-      setMessage("");
-    }, 5000);
+    DbService.addPersonToDb(newPerson).then(res => {
+      console.log("im herethen");
+      setPersons([...persons, newPerson]);
+      setPersonsToShow([...persons, newPerson]);
+      setNewName("");
+      setNewNumber("");
+      setMessage(`Added new person: ${newName}.`);
+      setTimeout(() => {
+        setMessage("");
+      }, 5000);
+    }).catch(error => {
+      setMessage(error.response.data.error);
+          setTimeout(() => {
+            setMessage("");
+          }, 5000);
+        }
+    )
+    
   };
 
 
@@ -58,7 +73,7 @@ const PersonForm = ({ persons, setPersons, setPersonsToShow, setMessage }) => {
         <input
           value={newNumber}
           onChange={(e) => {
-            if (!isNaN(e.target.value.slice(-1))) setNewNumber(e.target.value);
+            setNewNumber(e.target.value);
           }}
         />
       </div>
