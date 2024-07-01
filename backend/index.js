@@ -14,41 +14,48 @@ const entryModel = require("./models/entry");
 const PORT = process.env.PORT || 3001;
 
 app.get("/api/persons", (req, res) => {
-  entryModel.find({}).then(data => {
+  entryModel.find({}).then((data) => {
     res.json(data);
-  })
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  entryModel.findById(req.params.id).then(out => {
-    res.json(out);
-  }).catch(err => {
-    console.log(err);
-    res.send(400).end();
-  })
+  entryModel
+    .findById(req.params.id)
+    .then((out) => {
+      res.json(out);
+    })
+    .catch((err) => {
+      next(err);
+    });
 });
 
 app.delete("/api/persons/:id", (req, res) => {
-  entryModel.deleteById(req.params.id).then(out => {
-    res.json(out);
-  }).catch(err => {
-    res.send(500).end();
-  })
+  entryModel
+    .deleteOne({ _id: req.params.id })
+    .then((out) => {
+      res.json(out);
+    })
+    .catch((err) => {
+      next(err);
+    });
 });
 
 app.put("/api/persons/:id", async (req, res) => {
-  let entry = req.body;
   let doc = await entryModel.findById(req.params.id);
 
   doc.name = req.body.name;
-  doc.number= req.body.number;
+  doc.number = req.body.number;
 
-  doc.save().then(out => {
-    res.status(200).send(out);
-  }).catch(er => {
-    res.status(500).send(er);
-  })
-})
+  doc
+    .save()
+    .then((out) => {
+      res.status(200).send(out);
+    })
+    .catch((er) => {
+      next(err);
+    });
+});
 
 app.post("/api/persons", async (req, res) => {
   let entry = req.body;
@@ -77,27 +84,30 @@ app.post("/api/persons", async (req, res) => {
   try {
     let newPhone = new entryModel({
       name: req.body.name,
-      number: req.body.number
+      number: req.body.number,
     });
 
     const out = await entryModel.create(newPhone);
     return res.status(201).location(`/api/persons/${out.id}`).send(out);
   } catch (error) {
-    return res.status(500).end();
+    next(error);
   }
 });
 
-
 app.get("/info", (req, res) => {
-  let noPersons = entries.length;
-  let htmlContent = `
-        <div>
-            <p>Phonebook has info for ${noPersons} people.</p>
-            <br/>
-            ${new Date()}
-        </div>
-    `;
-  res.send(htmlContent);
+  entryModel
+    .countDocuments({})
+    .then((count) => {
+      let htmlContent = `
+    <div>
+        <p>Phonebook has info for ${count} people.</p>
+        <br/>
+        ${new Date()}
+    </div>
+`;
+      res.send(htmlContent);
+    })
+    .catch((error) => next(error));
 });
 
 const unknownEndpoint = (request, response) => {
@@ -105,6 +115,15 @@ const unknownEndpoint = (request, response) => {
 };
 
 app.use(unknownEndpoint);
+
+const errorHandler = (request, response, error) => {
+  console.error(error.message);
+  res.send(400).json({
+    error: error.message,
+  });
+};
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Serverul ruleaza la http://localhost:${PORT}`);
